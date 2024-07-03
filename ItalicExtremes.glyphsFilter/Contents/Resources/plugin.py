@@ -15,12 +15,13 @@
 ###########################################################################################################
 
 from __future__ import division, print_function
-from AppKit import NSBundle
-from GlyphsApp import *
-from GlyphsApp.plugins import *
-from Foundation import NSPoint, NSAffineTransform, NSAffineTransformStruct
-from vanilla import FloatingWindow, Group, EditText, Tabs, CheckBox, Button
+import objc
 from math import atan2, degrees, hypot
+from AppKit import NSBundle
+from GlyphsApp import Glyphs, GSFont
+from GlyphsApp.plugins import FilterWithDialog
+from Foundation import NSPoint, NSAffineTransform
+
 
 bundle = NSBundle.bundleForClass_(GSFont.__class__)
 objc.initFrameworkWrapper("GlyphsCore", frameworkIdentifier="com.schriftgestaltung.GlyphsCore", frameworkPath=bundle.bundlePath(), globals=globals())
@@ -31,87 +32,48 @@ try:
 except:
 	TimesOfBezier = GSExtremTimesOfBezier  # fallback for <= 3.1
 
+
+AddI = 0
+AddHV = 1
+
+
 class ItalicExtremes(FilterWithDialog):
+
+	dialog = objc.IBOutlet()
+
 	def loadPlugin(self):
 		self.menuName = "Italic Extremes"
 		self.actionButtonLabel = "Add Nodes"
 		self.keyboardShortcut = None
-		windowWidth  = 300
-		windowHeight = 120
-		m, h, yPos = 10, 18, 10
-		self.w = FloatingWindow(( windowWidth, windowHeight ))
-		self.w.group = Group((0, 0, windowWidth, windowHeight))
-		self.w.group.angle = EditText( (m, yPos, -50, h), "", placeholder='Angles', sizeStyle='small', callback=self.editAngles_callback, continuous=True)
-		self.w.group.refresh = Button((-40, yPos, -m, h), u"↺", callback=self.revertAngles_callback)
-		yPos += m+h
-		self.w.group.tabs = Tabs((m, yPos, -m, -m), ["Add slanted nodes", "Add H/V extremes"], callback=self.tab_callback)
-		self.tab1 = self.w.group.tabs[0]
-		self.tab1.removeV = CheckBox((m, 0, -m, h), "Delete vertical extremes", sizeStyle='small', value= False, callback=self.removeV_callback)
-		yPos = h
-		self.tab1.removeH = CheckBox((m, yPos, -m, h), "Delete horizontal extremes", sizeStyle='small', value= False, callback=self.removeH_callback)
-		self.tab2 = self.w.group.tabs[1]
-		yPos = 0
-		self.tab2.removeI = CheckBox((m, yPos, -m, h), "Delete slanted nodes", sizeStyle='small', value= False, callback=self.removeI_callback)
-
-		self.dialog = self.w.group.getNSView()
+		self.loadNib('dialog', __file__)
 
 	@objc.python_method
 	def start(self):
-		if not Glyphs.defaults['com.joachimvu.ItalicExtremes.angles']:
-			Glyphs.defaults['com.joachimvu.ItalicExtremes.angles'] = Glyphs.font.selectedFontMaster.italicAngle
-		self.w.group.angle.set(Glyphs.defaults['com.joachimvu.ItalicExtremes.angles'])
+		Glyphs.registerDefault('com.joachimvu.ItalicExtremes.angles', Glyphs.font.selectedFontMaster.italicAngle)
+		Glyphs.defaults['com.joachimvu.ItalicExtremes.option'] = AddI
 
-		self.w.group.tabs.set(0)
-		Glyphs.defaults['com.joachimvu.ItalicExtremes.option'] = "AddI"
-
-		if Glyphs.defaults['com.joachimvu.ItalicExtremes.removeV']:
-			self.tab1.removeV.set(Glyphs.defaults['com.joachimvu.ItalicExtremes.removeV'])
-		if Glyphs.defaults['com.joachimvu.ItalicExtremes.removeH']:
-			self.tab1.removeH.set(Glyphs.defaults['com.joachimvu.ItalicExtremes.removeH'])
-		if Glyphs.defaults['com.joachimvu.ItalicExtremes.removeI']:
-			self.tab2.removeI.set(Glyphs.defaults['com.joachimvu.ItalicExtremes.removeI'])
-
-	@objc.python_method
-	def editAngles_callback( self, sender ):
-		Glyphs.defaults['com.joachimvu.ItalicExtremes.angles'] = sender.get()
+	@objc.IBAction
+	def editAnglesCallback_(self, sender):
 		self.update()
 
-	@objc.python_method
-	def revertAngles_callback(self,sender):
-		self.w.group.angle.set(Glyphs.font.selectedFontMaster.italicAngle)
+	@objc.IBAction
+	def revertAnglesCallback_(self, sender):
 		Glyphs.defaults['com.joachimvu.ItalicExtremes.angles'] = Glyphs.font.selectedFontMaster.italicAngle
 		self.update()
 
-	@objc.python_method
-	def tab_callback( self, sender ):
-		if not sender.get():
-			Glyphs.defaults['com.joachimvu.ItalicExtremes.option'] = "AddI"
-		else:
-			Glyphs.defaults['com.joachimvu.ItalicExtremes.option'] = "AddHV"
+	def tabView_didSelectTabViewItem_(self, tabView, item):
 		self.update()
 
-	@objc.python_method
-	def removeV_callback( self, sender ):
-		if sender.get():
-			Glyphs.defaults['com.joachimvu.ItalicExtremes.removeV'] = 1
-		else:
-			Glyphs.defaults['com.joachimvu.ItalicExtremes.removeV'] = 0
+	@objc.IBAction
+	def removeVCallback_(self, sender):
 		self.update()
 
-	@objc.python_method
-	def removeH_callback( self, sender ):
-		if sender.get():
-			Glyphs.defaults['com.joachimvu.ItalicExtremes.removeH'] = 1
-		else:
-			Glyphs.defaults['com.joachimvu.ItalicExtremes.removeH'] = 0
+	@objc.IBAction
+	def removeHCallback_(self, sender):
 		self.update()
 
-	@objc.python_method
-	def removeI_callback( self, sender ):
-		if sender.get():
-			Glyphs.defaults['com.joachimvu.ItalicExtremes.removeI'] = 1
-		else:
-			Glyphs.defaults['com.joachimvu.ItalicExtremes.removeI'] = 0
+	@objc.IBAction
+	def removeICallback_(self, sender):
 		self.update()
 
 	@objc.python_method
@@ -234,7 +196,7 @@ class ItalicExtremes(FilterWithDialog):
 				italicAngle = float(a)
 			except:
 				pass
-			if option == "AddI":
+			if option == AddI:
 				center = self.get_center(layer)
 				rotate = self.rotation_transform(center, italicAngle, 1)
 				rotateMatrix = rotate.transformStruct()
@@ -248,7 +210,7 @@ class ItalicExtremes(FilterWithDialog):
 				if removeH:
 					self.delete_nodes(layer, 180)
 					self.delete_nodes(layer, 0)
-			elif option == "AddHV":
+			elif option == AddHV:
 				self.add_extremes(layer, addH=True)
 				if removeI:
 					self.delete_nodes(layer, 90 - italicAngle)
