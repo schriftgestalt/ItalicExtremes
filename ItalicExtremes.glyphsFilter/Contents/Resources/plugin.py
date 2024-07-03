@@ -3,13 +3,13 @@
 ###########################################################################################################
 #
 #
-#	Filter with dialog Plugin
+# Filter with dialog Plugin
 #
-#	Read the docs:
-#	https://github.com/schriftgestalt/GlyphsSDK/tree/master/Python%20Templates/Filter%20with%20Dialog
+# Read the docs:
+# https://github.com/schriftgestalt/GlyphsSDK/tree/master/Python%20Templates/Filter%20with%20Dialog
 #
-#	For help on the use of Interface Builder:
-#	https://github.com/schriftgestalt/GlyphsSDK/tree/master/Python%20Templates
+# For help on the use of Interface Builder:
+# https://github.com/schriftgestalt/GlyphsSDK/tree/master/Python%20Templates
 #
 #
 ###########################################################################################################
@@ -23,11 +23,9 @@ from vanilla import FloatingWindow, Group, EditText, Tabs, CheckBox, Button
 from math import atan2, degrees, hypot
 
 bundle = NSBundle.bundleForClass_(GSFont.__class__)
-objc.initFrameworkWrapper("GlyphsCore",
-	frameworkIdentifier="com.schriftgestaltung.GlyphsCore",
-	frameworkPath=bundle.bundlePath(),
-	globals=globals())
-	
+objc.initFrameworkWrapper("GlyphsCore", frameworkIdentifier="com.schriftgestaltung.GlyphsCore", frameworkPath=bundle.bundlePath(), globals=globals())
+
+
 try:
 	TimesOfBezier = GSExtremeTimesOfBezier
 except:
@@ -36,7 +34,7 @@ except:
 class ItalicExtremes(FilterWithDialog):
 	def loadPlugin(self):
 		self.menuName = "Italic Extremes"
-		self.actionButtonLabel = 'Add Nodes'
+		self.actionButtonLabel = "Add Nodes"
 		self.keyboardShortcut = None
 		windowWidth  = 300
 		windowHeight = 120
@@ -117,28 +115,29 @@ class ItalicExtremes(FilterWithDialog):
 		self.update()
 
 	@objc.python_method
-	def rotation_transform( self, rotationCenter, rotationDegrees, direction ):
+	def rotation_transform(self, rotationCenter, rotationDegrees, direction):
 		try:
 			rotationX = rotationCenter.x
 			rotationY = rotationCenter.y
-			rotation  = rotationDegrees * direction
+			rotation = rotationDegrees * direction
 			RotationTransform = NSAffineTransform.transform()
-			RotationTransform.translateXBy_yBy_( rotationX, rotationY )
-			RotationTransform.rotateByDegrees_( rotation )
-			RotationTransform.translateXBy_yBy_( -rotationX, -rotationY )
+			RotationTransform.translateXBy_yBy_(rotationX, rotationY)
+			RotationTransform.rotateByDegrees_(rotation)
+			RotationTransform.translateXBy_yBy_(-rotationX, -rotationY)
 			return RotationTransform
 		except Exception as e:
+			print(e)
 			import traceback
 			print(traceback.format_exc())
 
 	@objc.python_method
-	def get_center( self, layer ):
-		center = NSPoint( layer.bounds.origin.x + layer.bounds.size.width/2, layer.bounds.origin.y + layer.bounds.size.height/2 )
+	def get_center(self, layer):
+		center = NSPoint(layer.bounds.origin.x + layer.bounds.size.width / 2, layer.bounds.origin.y + layer.bounds.size.height / 2)
 		return center
 
 	@objc.python_method
 	def get_angle(self, node1, node2):
-		myradians = atan2(node1.y-node2.y, node1.x-node2.x)
+		myradians = atan2(node1.y - node2.y, node1.x - node2.x)
 		return degrees(myradians)
 
 	@objc.python_method
@@ -150,26 +149,26 @@ class ItalicExtremes(FilterWithDialog):
 		newOffcurve = path.nodes[nodeIdx - 1]
 		angle = self.get_angle(newNode, newOffcurve)
 		del copy
-		if inputAngle-1 <= abs(int(angle)) <= inputAngle+1:
+		if inputAngle - 1 <= abs(int(angle)) <= inputAngle + 1:
 			return pathTime
 
 	@objc.python_method
 	def get_selection(self, layer):
-		if "%s"%layer.selectionBounds.origin.x == "9.22337203685e+18":
+		if layer.selectionBounds.origin.x > 10000000:
 			return [n for p in layer.paths for n in p.nodes]
 		else:
 			return [n for p in layer.paths for n in p.nodes if n.selected]
 
 	@objc.python_method
-	def add_extremes(self, layer, addH = False):
+	def add_extremes(self, layer, addH=False):
 
 		def get_pathTime_for_angle(layer, pathIdx, nodeIdx, pathTime, inputAngle):
 			checkedPathtime = self.check_extreme_angle(layer, pathIdx, nodeIdx, pathTime, inputAngle)
 			if checkedPathtime:
 				path.insertNodeWithPathTime_(checkedPathtime)
 
-		for i,path in enumerate(layer.paths):
-			for idx in range(len(path.nodes) -1, -1, -1):
+		for i, path in enumerate(layer.paths):
+			for idx in range(len(path.nodes) - 1, -1, -1):
 				node = path.nodes[idx]
 				if node in self.get_selection(layer) and path.nodes[idx - 3] in self.get_selection(layer) and node.type == "curve":
 					p1 = path.nodes[idx - 3].position
@@ -196,7 +195,7 @@ class ItalicExtremes(FilterWithDialog):
 					angle = self.get_angle(n, n.nextNode)
 				elif nextDist < prevDist:
 					angle = self.get_angle(n, n.prevNode)
-				if n in self.get_selection(layer) and n.smooth and n.prevNode.type == n.nextNode.type == "offcurve" and n.type == "curve" and inputAngle-1 <= abs(int(angle)) <= inputAngle+1 :
+				if n in self.get_selection(layer) and n.smooth and n.prevNode.type == n.nextNode.type == "offcurve" and n.type == "curve" and inputAngle - 1 <= abs(int(angle)) <= inputAngle + 1:
 					delete.append(n)
 			for d in delete:
 				p.removeNodeCheckKeepShape_(d)
@@ -237,11 +236,11 @@ class ItalicExtremes(FilterWithDialog):
 				pass
 			if option == "AddI":
 				center = self.get_center(layer)
-				rotate = self.rotation_transform( center, italicAngle, 1 )
+				rotate = self.rotation_transform(center, italicAngle, 1)
 				rotateMatrix = rotate.transformStruct()
 				layer.applyTransform(rotateMatrix)
 				self.add_extremes(layer)
-				rotate = self.rotation_transform( center, italicAngle, -1 )
+				rotate = self.rotation_transform(center, italicAngle, -1)
 				rotateMatrix = rotate.transformStruct()
 				layer.applyTransform(rotateMatrix)
 				if removeV:
@@ -252,19 +251,19 @@ class ItalicExtremes(FilterWithDialog):
 			elif option == "AddHV":
 				self.add_extremes(layer, addH=True)
 				if removeI:
-					self.delete_nodes(layer, 90-italicAngle)
-					self.delete_nodes(layer, 90+italicAngle)
+					self.delete_nodes(layer, 90 - italicAngle)
+					self.delete_nodes(layer, 90 + italicAngle)
 
 	@objc.python_method
-	def generateCustomParameter( self ):
+	def generateCustomParameter(self):
 		return "%s; angles:%s; option:%s; removeV:%s; removeH:%s; removeI:%s" % (
-			self.__class__.__name__, 
+			self.__class__.__name__,
 			Glyphs.defaults['com.joachimvu.ItalicExtremes.angles'],
 			Glyphs.defaults['com.joachimvu.ItalicExtremes.option'],
 			Glyphs.defaults['com.joachimvu.ItalicExtremes.removeV'],
 			Glyphs.defaults['com.joachimvu.ItalicExtremes.removeH'],
 			Glyphs.defaults['com.joachimvu.ItalicExtremes.removeI'],
-			)
+		)
 
 	@objc.python_method
 	def __file__(self):
